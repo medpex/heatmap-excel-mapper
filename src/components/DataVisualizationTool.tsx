@@ -1,9 +1,10 @@
 import { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { MapPin, Building2, Navigation, TrendingUp } from 'lucide-react';
+import { MapPin, Building2, TrendingUp, Filter, Download, RotateCcw } from 'lucide-react';
+import { Button } from '@/components/ui/button';
 import { useToast } from '@/hooks/use-toast';
 import MapComponent from './MapComponent';
-import FilterSidebar from './FilterSidebar';
+import FilterPanel from './FilterPanel';
 
 export interface DataRow {
   'Geändert am'?: string;
@@ -58,6 +59,7 @@ function toCSV(rows: DataRow[]): string {
 const DataVisualizationTool = () => {
   const [allGeoData, setAllGeoData] = useState<DataRow[]>([]);
   const [isLoading, setIsLoading] = useState(false);
+  const [showFilters, setShowFilters] = useState(false);
   const [ortFilter, setOrtFilter] = useState<string[]>([]);
   const [plzFilter, setPlzFilter] = useState<string[]>([]);
   const [jahrRange, setJahrRange] = useState<[number, number]>([2000, 2024]);
@@ -92,7 +94,6 @@ const DataVisualizationTool = () => {
   const ortOptions = unique(allGeoData.map(d => d.Ort));
   const jahrOptions = unique(allGeoData.map(d => getYear(d.Datum))).map(Number).filter(Boolean).sort((a, b) => a - b);
   const artOptions = unique(allGeoData.map(d => d.Art));
-  // KW-Zahl Bereich
   const kwValues = allGeoData.map(d => typeof d['KW-Zahl'] === 'number' ? d['KW-Zahl'] : parseFloat(d['KW-Zahl'] as string)).filter(v => !isNaN(v));
   const kwMinValue = kwValues.length ? Math.min(...kwValues) : 0;
   const kwMaxValue = kwValues.length ? Math.max(...kwValues) : 100;
@@ -109,7 +110,7 @@ const DataVisualizationTool = () => {
     (search === '' || d['Ort, Strasse Haus-Nr'].toLowerCase().includes(search.toLowerCase()))
   );
 
-  // Statistik-Karten
+  // Statistiken
   const stats = {
     count: geoData.length,
     sumKW: geoData.reduce((sum, d) => sum + (Number(d['KW-Zahl']) || 0), 0),
@@ -121,7 +122,6 @@ const DataVisualizationTool = () => {
     uniqueOrte: new Set(geoData.map(d => d.Ort)).size,
   };
 
-  // Reset-Handler für Filter und Map
   const handleReset = () => {
     setOrtFilter([]);
     setPlzFilter([]);
@@ -132,7 +132,6 @@ const DataVisualizationTool = () => {
     setSearch('');
   };
 
-  // Export-Handler
   const handleExport = () => {
     const csv = toCSV(geoData);
     const blob = new Blob([csv], { type: 'text/csv' });
@@ -145,141 +144,139 @@ const DataVisualizationTool = () => {
   };
 
   return (
-    <div className="min-h-screen bg-background font-corporate">
-      {/* Main Content */}
-      <div className="flex flex-1 min-h-0">
-        {/* Professional Sidebar */}
-        <aside className="w-80 bg-card border-r border-border shadow-strong flex flex-col">
-          <div className="p-6 border-b border-border bg-gradient-header">
-            <h2 className="text-lg font-semibold text-white mb-1">Datenfilter</h2>
-            <p className="text-sm text-white/80">Konfigurieren Sie Ihre Analyse</p>
-          </div>
-          
-          <div className="flex-1 p-6 overflow-y-auto">
-            <FilterSidebar
-              ortFilter={ortFilter}
-              setOrtFilter={setOrtFilter}
-              ortOptions={ortOptions}
-              jahrRange={jahrRange}
-              setJahrRange={setJahrRange}
-              jahrMinValue={jahrMinValue}
-              jahrMaxValue={jahrMaxValue}
-              kwRange={kwRange}
-              setKwRange={setKwRange}
-              kwMinValue={kwMinValue}
-              kwMaxValue={kwMaxValue}
-              artFilter={artFilter}
-              setArtFilter={setArtFilter}
-              artOptions={artOptions}
-              search={search}
-              setSearch={setSearch}
-            />
+    <div className="min-h-screen bg-background">
+      <div className="max-w-7xl mx-auto p-6 space-y-6">
+        {/* Header with Stats */}
+        <div className="space-y-4">
+          <div className="flex items-center justify-between">
+            <div>
+              <h1 className="text-2xl font-bold text-foreground">Geografische Datenanalyse</h1>
+              <p className="text-muted-foreground">Interaktive Kartenvisualisierung und Datenfilterung</p>
+            </div>
             
-            <div className="mt-6 pt-6 border-t border-border">
-              <h3 className="text-sm font-semibold text-foreground mb-3">Kartenansicht</h3>
-              <select 
-                value={layer} 
-                onChange={e => setLayer(e.target.value as any)} 
-                className="w-full p-2.5 border border-border rounded-md bg-card text-foreground text-sm focus:outline-none focus:ring-2 focus:ring-primary"
+            <div className="flex items-center gap-3">
+              <Button
+                variant="outline"
+                onClick={() => setShowFilters(!showFilters)}
+                className="gap-2"
               >
-                <option value="heatmap">Heatmap</option>
-                <option value="cluster">Cluster</option>
-                <option value="marker">Einzelne Marker</option>
-              </select>
+                <Filter className="h-4 w-4" />
+                Filter {showFilters ? 'ausblenden' : 'anzeigen'}
+              </Button>
+              <Button variant="outline" onClick={handleReset} className="gap-2">
+                <RotateCcw className="h-4 w-4" />
+                Zurücksetzen
+              </Button>
+              <Button onClick={handleExport} className="gap-2">
+                <Download className="h-4 w-4" />
+                Export CSV
+              </Button>
             </div>
           </div>
-          
-          <div className="p-6 border-t border-border bg-muted/30 space-y-3">
-            <button 
-              onClick={handleReset} 
-              className="w-full flex items-center justify-center gap-2 px-4 py-2.5 bg-secondary text-secondary-foreground rounded-md font-medium text-sm hover:bg-secondary/80 transition-colors"
-            >
-              <Navigation className="h-4 w-4" />
-              Filter zurücksetzen
-            </button>
-            <button 
-              onClick={handleExport} 
-              className="w-full flex items-center justify-center gap-2 px-4 py-2.5 bg-primary text-primary-foreground rounded-md font-medium text-sm hover:bg-primary/90 transition-colors"
-            >
-              <TrendingUp className="h-4 w-4" />
-              CSV Export
-            </button>
-          </div>
-        </aside>
 
-        {/* Map Area */}
-        <main className="flex-1 bg-muted/30">
-          {/* Stats Overview */}
-          <div className="p-6 bg-card border-b border-border">
-            <div className="grid grid-cols-4 gap-6">
-              <Card className="bg-gradient-to-br from-blue-50 to-blue-100 border-blue-200 shadow-soft">
-                <CardContent className="p-4 flex items-center gap-4">
-                  <div className="p-3 bg-blue-500 rounded-lg">
-                    <MapPin className="h-6 w-6 text-white" />
+          {/* Stats Cards */}
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+            <Card className="bg-gradient-to-br from-blue-50 to-blue-100 border-blue-200">
+              <CardContent className="p-4">
+                <div className="flex items-center gap-3">
+                  <div className="p-2 bg-blue-500 rounded-lg">
+                    <MapPin className="h-5 w-5 text-white" />
                   </div>
                   <div>
                     <p className="text-2xl font-bold text-blue-700">{stats.count.toLocaleString()}</p>
-                    <p className="text-sm font-medium text-blue-600">Anschlüsse</p>
+                    <p className="text-sm text-blue-600 font-medium">Anschlüsse</p>
                   </div>
-                </CardContent>
-              </Card>
-              
-              <Card className="bg-gradient-to-br from-green-50 to-green-100 border-green-200 shadow-soft">
-                <CardContent className="p-4 flex items-center gap-4">
-                  <div className="p-3 bg-green-500 rounded-lg">
-                    <TrendingUp className="h-6 w-6 text-white" />
+                </div>
+              </CardContent>
+            </Card>
+            
+            <Card className="bg-gradient-to-br from-green-50 to-green-100 border-green-200">
+              <CardContent className="p-4">
+                <div className="flex items-center gap-3">
+                  <div className="p-2 bg-green-500 rounded-lg">
+                    <TrendingUp className="h-5 w-5 text-white" />
                   </div>
                   <div>
                     <p className="text-2xl font-bold text-green-700">{stats.sumKW.toLocaleString()}</p>
-                    <p className="text-sm font-medium text-green-600">Gesamt kW</p>
+                    <p className="text-sm text-green-600 font-medium">Gesamt kW</p>
                   </div>
-                </CardContent>
-              </Card>
-              
-              <Card className="bg-gradient-to-br from-purple-50 to-purple-100 border-purple-200 shadow-soft">
-                <CardContent className="p-4 flex items-center gap-4">
-                  <div className="p-3 bg-purple-500 rounded-lg">
-                    <Building2 className="h-6 w-6 text-white" />
+                </div>
+              </CardContent>
+            </Card>
+            
+            <Card className="bg-gradient-to-br from-purple-50 to-purple-100 border-purple-200">
+              <CardContent className="p-4">
+                <div className="flex items-center gap-3">
+                  <div className="p-2 bg-purple-500 rounded-lg">
+                    <Building2 className="h-5 w-5 text-white" />
                   </div>
                   <div>
                     <p className="text-lg font-bold text-purple-700">{stats.topArt}</p>
-                    <p className="text-sm font-medium text-purple-600">Häufigste Art</p>
+                    <p className="text-sm text-purple-600 font-medium">Häufigste Art</p>
                   </div>
-                </CardContent>
-              </Card>
-              
-              <Card className="bg-gradient-to-br from-orange-50 to-orange-100 border-orange-200 shadow-soft">
-                <CardContent className="p-4 flex items-center gap-4">
-                  <div className="p-3 bg-orange-500 rounded-lg">
-                    <MapPin className="h-6 w-6 text-white" />
+                </div>
+              </CardContent>
+            </Card>
+            
+            <Card className="bg-gradient-to-br from-orange-50 to-orange-100 border-orange-200">
+              <CardContent className="p-4">
+                <div className="flex items-center gap-3">
+                  <div className="p-2 bg-orange-500 rounded-lg">
+                    <MapPin className="h-5 w-5 text-white" />
                   </div>
                   <div>
                     <p className="text-2xl font-bold text-orange-700">{stats.uniqueOrte}</p>
-                    <p className="text-sm font-medium text-orange-600">Standorte</p>
+                    <p className="text-sm text-orange-600 font-medium">Standorte</p>
                   </div>
-                </CardContent>
-              </Card>
-            </div>
-          </div>
-
-          {/* Map Container */}
-          <div className="p-6">
-            <Card className="shadow-xl border border-border overflow-hidden">
-              <CardHeader className="bg-gradient-header text-white p-6">
-                <CardTitle className="flex items-center gap-3 text-lg font-semibold">
-                  <MapPin className="h-5 w-5" />
-                  Geografische Datenanalyse
-                  <span className="text-sm font-normal text-white/80 ml-auto">
-                    {geoData.length} Datenpunkte angezeigt
-                  </span>
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="p-0">
-                <MapComponent data={geoData} layer={layer} />
+                </div>
               </CardContent>
             </Card>
           </div>
-        </main>
+        </div>
+
+        {/* Filter Panel */}
+        {showFilters && (
+          <Card className="shadow-medium">
+            <CardContent className="p-6">
+              <FilterPanel
+                ortFilter={ortFilter}
+                setOrtFilter={setOrtFilter}
+                ortOptions={ortOptions}
+                jahrRange={jahrRange}
+                setJahrRange={setJahrRange}
+                jahrMinValue={jahrMinValue}
+                jahrMaxValue={jahrMaxValue}
+                kwRange={kwRange}
+                setKwRange={setKwRange}
+                kwMinValue={kwMinValue}
+                kwMaxValue={kwMaxValue}
+                artFilter={artFilter}
+                setArtFilter={setArtFilter}
+                artOptions={artOptions}
+                search={search}
+                setSearch={setSearch}
+                layer={layer}
+                setLayer={setLayer}
+              />
+            </CardContent>
+          </Card>
+        )}
+
+        {/* Map */}
+        <Card className="shadow-xl border border-border overflow-hidden">
+          <CardHeader className="bg-gradient-header text-white">
+            <CardTitle className="flex items-center gap-2">
+              <MapPin className="h-5 w-5" />
+              Kartenansicht
+              <span className="text-sm font-normal text-white/80 ml-auto">
+                {geoData.length} Datenpunkte
+              </span>
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="p-0">
+            <MapComponent data={geoData} layer={layer} />
+          </CardContent>
+        </Card>
       </div>
     </div>
   );
