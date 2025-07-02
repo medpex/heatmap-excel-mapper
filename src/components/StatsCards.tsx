@@ -11,7 +11,7 @@ const StatsCards = ({ data }: StatsCardsProps) => {
   const stats = useMemo(() => {
     const totalEntries = data.length;
     const uniqueOrte = new Set(data.map(row => row.Ort)).size;
-    const totalKW = data.reduce((sum, row) => sum + (row['KW-Zahl'] || 0), 0);
+    const totalKW = data.reduce((sum, row) => sum + (Number(row['KW-Zahl']) || 0), 0);
     const sparteStats = data.reduce((acc, row) => {
       acc[row.Sparte] = (acc[row.Sparte] || 0) + 1;
       return acc;

@@ -57,10 +57,7 @@ function toCSV(rows: DataRow[]): string {
 
 const DataVisualizationTool = () => {
   const [allGeoData, setAllGeoData] = useState<DataRow[]>([]);
-  const [progress, setProgress] = useState(0);
-  const [isGeocoding, setIsGeocoding] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
-  const [currentAddress, setCurrentAddress] = useState('');
   const [ortFilter, setOrtFilter] = useState<string[]>([]);
   const [plzFilter, setPlzFilter] = useState<string[]>([]);
   const [jahrRange, setJahrRange] = useState<[number, number]>([2000, 2024]);
@@ -71,7 +68,7 @@ const DataVisualizationTool = () => {
   const { toast } = useToast();
 
   useEffect(() => {
-    const processAllTables = async () => {
+    const loadAllTables = async () => {
       setIsLoading(true);
       let allData: DataRow[] = [];
       for (const table of TABLES) {
@@ -85,49 +82,10 @@ const DataVisualizationTool = () => {
         }
       }
       setAllGeoData(allData);
-      setIsGeocoding(true);
-      let geocoded = [...allData];
-      let toGeocode = geocoded.filter(d => !d.latitude || !d.longitude);
-      for (let i = 0; i < toGeocode.length; i++) {
-        const d = toGeocode[i];
-        const address = `${d.Strasse} ${d['Haus-Nr']}, ${d.PLZ} ${d.Ort}, Deutschland`;
-        setCurrentAddress(address);
-        try {
-          await new Promise(resolve => setTimeout(resolve, 2000));
-          const response = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(address)}&limit=1`);
-          if (!response.ok) throw new Error('Nominatim nicht erreichbar');
-          const geocodeResult = await response.json();
-          if (geocodeResult.length > 0) {
-            d.latitude = parseFloat(geocodeResult[0].lat);
-            d.longitude = parseFloat(geocodeResult[0].lon);
-            // Koordinaten in der DB speichern
-            await fetch(`${API_URL}/update-coords/${d._table}`, {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({
-                plz: d.PLZ,
-                ort: d.Ort,
-                strasse: d.Strasse,
-                hausnr: d['Haus-Nr'],
-                latitude: d.latitude,
-                longitude: d.longitude
-              })
-            });
-          } else {
-            toast({ title: 'Geokodierung fehlgeschlagen', description: `Keine Koordinaten für: ${address}`, variant: 'destructive' });
-          }
-        } catch (error) {
-          toast({ title: 'Geokodierung fehlgeschlagen', description: `Fehler für: ${address}`, variant: 'destructive' });
-        }
-        setProgress(Math.round(((i + 1) / toGeocode.length) * 100));
-        setAllGeoData([...geocoded]);
-      }
-      setIsGeocoding(false);
-      setCurrentAddress('');
       setIsLoading(false);
-      toast({ title: 'Geokodierung abgeschlossen', description: `${geocoded.filter(d => d.latitude && d.longitude).length} Datensätze mit Koordinaten` });
+      toast({ title: 'Daten geladen', description: `${allData.filter(d => d.latitude && d.longitude).length} Datensätze mit Koordinaten` });
     };
-    processAllTables();
+    loadAllTables();
   }, [toast]);
 
   // Filteroptionen berechnen
@@ -264,19 +222,6 @@ const DataVisualizationTool = () => {
               <span className="text-xs font-medium text-orange-700 mt-0.5">Orte</span>
             </Card>
           </div>
-          {isGeocoding && currentAddress && (
-            <div className="absolute top-8 left-1/2 -translate-x-1/2 z-30 w-full max-w-xl">
-              <div className="bg-white/90 rounded-lg shadow-lg p-4 border border-blue-200">
-                <div className="text-xl font-bold text-blue-700 mb-2">Verarbeite: {currentAddress}</div>
-                <div className="w-full">
-                  <div className="bg-gray-200 rounded-full h-4">
-                    <div className="bg-blue-500 h-4 rounded-full transition-all duration-300" style={{ width: `${progress}%` }} />
-                  </div>
-                  <div className="text-center mt-2 text-sm text-gray-600">Geokodiere... {progress}%</div>
-                </div>
-              </div>
-            </div>
-          )}
           <div className="w-full max-w-6xl mx-auto flex-1 flex flex-col">
             <Card className="shadow-2xl border-2 border-blue-100">
               <CardHeader>
