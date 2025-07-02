@@ -4,7 +4,7 @@ import { NavLink, useLocation } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 
 const navigationItems = [
-  { title: "Dashboard", url: "/", icon: BarChart3 },
+  { title: "Analytics", url: "/", icon: BarChart3 },
   { title: "Karten-Ansicht", url: "/map", icon: Map },
   { title: "Vergleiche", url: "/compare", icon: GitCompare },
 ];
