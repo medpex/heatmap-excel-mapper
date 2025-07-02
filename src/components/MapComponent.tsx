@@ -1,7 +1,10 @@
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useMemo } from 'react';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 import 'leaflet.heat';
+import 'leaflet.markercluster/dist/MarkerCluster.css';
+import 'leaflet.markercluster/dist/MarkerCluster.Default.css';
+import 'leaflet.markercluster';
 import { DataRow } from './DataVisualizationTool';
 
 // Fix for default markers
@@ -19,8 +22,24 @@ interface MapComponentProps {
 const MapComponent = ({ data }: MapComponentProps) => {
   const mapContainer = useRef<HTMLDivElement>(null);
   const map = useRef<L.Map | null>(null);
-  const markersLayer = useRef<L.LayerGroup | null>(null);
+  const clusterGroup = useRef<any>(null);
   const heatmapLayer = useRef<any>(null);
+
+  // Memoize valid data for performance
+  const validData = useMemo(() => 
+    data.filter(row => row.latitude && row.longitude), 
+    [data]
+  );
+
+  // Memoize heatmap data
+  const heatData = useMemo(() => 
+    validData.map(row => [
+      row.latitude!,
+      row.longitude!,
+      row['KW-Zahl'] || 1
+    ]), 
+    [validData]
+  );
 
   useEffect(() => {
     if (!mapContainer.current) return;
@@ -28,10 +47,11 @@ const MapComponent = ({ data }: MapComponentProps) => {
     // Initialize map if not exists
     if (!map.current) {
       map.current = L.map(mapContainer.current, {
-        center: [51.1657, 10.4515], // Center of Germany
+        center: [51.1657, 10.4515],
         zoom: 6,
         scrollWheelZoom: true,
         zoomControl: true,
+        preferCanvas: true, // Better performance for large datasets
       });
 
       // Add OpenStreetMap tiles
@@ -39,29 +59,30 @@ const MapComponent = ({ data }: MapComponentProps) => {
         attribution: '© OpenStreetMap contributors',
         maxZoom: 18,
       }).addTo(map.current);
-
-      // Initialize layers
-      markersLayer.current = L.layerGroup().addTo(map.current);
     }
 
-    // Clear existing markers and heatmap
-    if (markersLayer.current) {
-      markersLayer.current.clearLayers();
+    // Clear existing layers
+    if (clusterGroup.current) {
+      map.current?.removeLayer(clusterGroup.current);
     }
     if (heatmapLayer.current) {
       map.current?.removeLayer(heatmapLayer.current);
     }
 
-    // Filter data with valid coordinates
-    const validData = data.filter(row => row.latitude && row.longitude);
-
     if (validData.length === 0) return;
 
-    // Create markers
-    validData.forEach((row) => {
-      if (!row.latitude || !row.longitude || !markersLayer.current) return;
+    // Create marker cluster group for better performance with many markers
+    clusterGroup.current = (L as any).markerClusterGroup({
+      chunkedLoading: true,
+      maxClusterRadius: 50,
+      spiderfyOnMaxZoom: true,
+      showCoverageOnHover: false,
+      zoomToBoundsOnClick: true,
+    });
 
-      const marker = L.marker([row.latitude, row.longitude]);
+    // Batch create markers for better performance
+    const markers = validData.map((row) => {
+      const marker = L.marker([row.latitude!, row.longitude!]);
       
       const popupContent = `
         <div class="p-3 min-w-[250px]">
@@ -78,15 +99,12 @@ const MapComponent = ({ data }: MapComponentProps) => {
       `;
       
       marker.bindPopup(popupContent);
-      markersLayer.current?.addLayer(marker);
+      return marker;
     });
 
-    // Create heatmap data
-    const heatData = validData.map(row => [
-      row.latitude!,
-      row.longitude!,
-      row['KW-Zahl'] || 1 // Use KW-Zahl as intensity, fallback to 1
-    ]);
+    // Add all markers to cluster group at once
+    clusterGroup.current.addLayers(markers);
+    map.current?.addLayer(clusterGroup.current);
 
     // Add heatmap layer
     if ((L as any).heatLayer && heatData.length > 0) {
@@ -107,19 +125,11 @@ const MapComponent = ({ data }: MapComponentProps) => {
     }
 
     // Fit map to show all markers
-    if (validData.length > 0 && markersLayer.current) {
-      const layers = markersLayer.current.getLayers();
-      if (layers.length > 0) {
-        const group = L.featureGroup(layers);
-        map.current?.fitBounds(group.getBounds().pad(0.1));
-      }
+    if (validData.length > 0 && clusterGroup.current) {
+      map.current?.fitBounds(clusterGroup.current.getBounds().pad(0.1));
     }
 
-    // Cleanup function
-    return () => {
-      // Don't destroy the map, just clear layers
-    };
-  }, [data]);
+  }, [validData, heatData]);
 
   // Cleanup on component unmount
   useEffect(() => {

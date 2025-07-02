@@ -9,6 +9,7 @@ import * as XLSX from 'xlsx';
 import { useToast } from '@/hooks/use-toast';
 import MapComponent from './MapComponent';
 import DataTable from './DataTable';
+import VirtualizedDataTable from './VirtualizedDataTable';
 import StatsCards from './StatsCards';
 
 export interface DataRow {
@@ -40,6 +41,31 @@ const DataVisualizationTool = () => {
   const [isLoading, setIsLoading] = useState(false);
   const { toast } = useToast();
 
+  const geocodeBatch = async (batch: DataRow[]) => {
+    return Promise.all(
+      batch.map(async (row) => {
+        try {
+          const address = `${row.Strasse} ${row['Haus-Nr']}, ${row.PLZ} ${row.Ort}, Deutschland`;
+          await new Promise(resolve => setTimeout(resolve, 100)); // Rate limiting
+          const response = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(address)}&limit=1`);
+          const geocodeResult = await response.json();
+          
+          if (geocodeResult.length > 0) {
+            return {
+              ...row,
+              latitude: parseFloat(geocodeResult[0].lat),
+              longitude: parseFloat(geocodeResult[0].lon)
+            };
+          }
+          return row;
+        } catch (error) {
+          console.warn('Geocoding failed for:', row.Ort, error);
+          return row;
+        }
+      })
+    );
+  };
+
   const handleFileUpload = useCallback(async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (!file) return;
@@ -52,35 +78,31 @@ const DataVisualizationTool = () => {
       const worksheet = workbook.Sheets[sheetName];
       const jsonData = XLSX.utils.sheet_to_json(worksheet) as DataRow[];
 
-      // Add geocoding for heatmap functionality
-      const dataWithCoords = await Promise.all(
-        jsonData.map(async (row) => {
-          try {
-            const address = `${row.Strasse} ${row['Haus-Nr']}, ${row.PLZ} ${row.Ort}, Deutschland`;
-            const response = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(address)}&limit=1`);
-            const geocodeResult = await response.json();
-            
-            if (geocodeResult.length > 0) {
-              return {
-                ...row,
-                latitude: parseFloat(geocodeResult[0].lat),
-                longitude: parseFloat(geocodeResult[0].lon)
-              };
-            }
-            return row;
-          } catch (error) {
-            console.warn('Geocoding failed for:', row.Ort, error);
-            return row;
-          }
-        })
-      );
+      // Process geocoding in batches for better performance
+      const batchSize = 10;
+      const batches = [];
+      for (let i = 0; i < jsonData.length; i += batchSize) {
+        batches.push(jsonData.slice(i, i + batchSize));
+      }
+
+      const dataWithCoords: DataRow[] = [];
+      for (let i = 0; i < batches.length; i++) {
+        const batchResults = await geocodeBatch(batches[i]);
+        dataWithCoords.push(...batchResults);
+        
+        // Update progress
+        toast({
+          title: `Geocoding Progress: ${Math.round(((i + 1) / batches.length) * 100)}%`,
+          description: `${dataWithCoords.length} von ${jsonData.length} Datensätze verarbeitet`,
+        });
+      }
 
       setData(dataWithCoords);
       setFilteredData(dataWithCoords);
       
       toast({
         title: "Datei erfolgreich hochgeladen",
-        description: `${dataWithCoords.length} Datensätze importiert`,
+        description: `${dataWithCoords.length} Datensätze importiert und geocodiert`,
       });
     } catch (error) {
       toast({
@@ -246,7 +268,11 @@ const DataVisualizationTool = () => {
             <TabsContent value="table" className="mt-6">
               <Card className="shadow-medium">
                 <CardContent className="p-6">
-                  <DataTable data={filteredData} />
+                  {filteredData.length > 1000 ? (
+                    <VirtualizedDataTable data={filteredData} />
+                  ) : (
+                    <DataTable data={filteredData} />
+                  )}
                 </CardContent>
               </Card>
             </TabsContent>
