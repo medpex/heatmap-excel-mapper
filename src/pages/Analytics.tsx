@@ -220,26 +220,6 @@ const Analytics = () => {
             </CardContent>
           </Card>
 
-          {/* Top 10 Standorte */}
-          <Card className="shadow-medium">
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <MapPin className="h-5 w-5 text-primary" />
-                Top 10 Standorte
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <ResponsiveContainer width="100%" height={300}>
-                <BarChart data={connectionsByLocation} layout="horizontal">
-                  <CartesianGrid strokeDasharray="3 3" />
-                  <XAxis type="number" />
-                  <YAxis dataKey="ort" type="category" width={80} />
-                  <Tooltip />
-                  <Bar dataKey="count" fill="#10B981" />
-                </BarChart>
-              </ResponsiveContainer>
-            </CardContent>
-          </Card>
 
           {/* Anschlüsse nach Art - Pie Chart */}
           <Card className="shadow-medium">
