@@ -171,26 +171,30 @@ const MapComponent = ({ data, layer }: MapComponentProps) => {
   }, []);
 
   return (
-    <div className="relative">
+    <div className="relative bg-muted/30">
       <div 
         ref={mapContainer} 
-        className="h-[600px] w-full rounded-lg border border-border"
-        style={{ minHeight: '600px' }}
+        className="h-[500px] w-full"
+        style={{ minHeight: '500px' }}
       />
-      <div className="absolute top-4 right-4 bg-card/90 backdrop-blur-sm p-3 rounded-lg shadow-medium border border-border">
-        <div className="space-y-2 text-sm">
-          <h4 className="font-semibold text-foreground">Legende</h4>
-          <div className="flex items-center gap-2">
-            <div className="w-3 h-3 bg-blue-500 rounded-full"></div>
-            <span className="text-muted-foreground">Marker</span>
+      <div className="absolute top-6 right-6 bg-card/95 backdrop-blur-sm p-4 rounded-lg shadow-strong border border-border">
+        <div className="space-y-3 text-sm">
+          <h4 className="font-semibold text-foreground text-xs uppercase tracking-wider">Legende</h4>
+          <div className="space-y-2">
+            <div className="flex items-center gap-3">
+              <div className="w-3 h-3 bg-primary rounded-full shadow-sm"></div>
+              <span className="text-muted-foreground font-medium">Anschlüsse</span>
+            </div>
+            <div className="flex items-center gap-3">
+              <div className="w-3 h-3 bg-gradient-to-r from-primary to-destructive rounded-full shadow-sm"></div>
+              <span className="text-muted-foreground font-medium">Dichte</span>
+            </div>
           </div>
-          <div className="flex items-center gap-2">
-            <div className="w-3 h-3 bg-gradient-to-r from-blue-500 to-red-500 rounded-full"></div>
-            <span className="text-muted-foreground">Heatmap</span>
+          <div className="pt-2 border-t border-border">
+            <p className="text-xs text-muted-foreground/80">
+              Intensität: Anzahl Anschlüsse
+            </p>
           </div>
-          <p className="text-xs text-muted-foreground mt-2">
-            Intensität basiert auf Anschlüssen
-          </p>
         </div>
       </div>
     </div>
