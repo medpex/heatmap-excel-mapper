@@ -33,12 +33,12 @@ const MapComponent = ({ data, layer }: MapComponentProps) => {
     [data]
   );
 
-  // Memoize heatmap data
+  // Memoize heatmap data - use count of connections instead of KW-Zahl
   const heatData = useMemo(() => 
     validData.map(row => [
       row.latitude!,
       row.longitude!,
-      row['KW-Zahl'] || 1
+      1 // Each connection has equal weight
     ]), 
     [validData]
   );
@@ -189,7 +189,7 @@ const MapComponent = ({ data, layer }: MapComponentProps) => {
             <span className="text-muted-foreground">Heatmap</span>
           </div>
           <p className="text-xs text-muted-foreground mt-2">
-            Intensität basiert auf KW-Zahl
+            Intensität basiert auf Anschlüssen
           </p>
         </div>
       </div>
