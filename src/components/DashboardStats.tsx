@@ -79,24 +79,6 @@ const DashboardStats = ({ data }: DashboardStatsProps) => {
       borderColor: "border-l-green-500"
     },
     {
-      title: "Gesamt KW-Zahl",
-      value: formatNumber(stats.totalKW),
-      description: "Kilowatt gesamt",
-      icon: Zap,
-      color: "text-orange-600", 
-      bgColor: "bg-orange-50",
-      borderColor: "border-l-orange-500"
-    },
-    {
-      title: "Ø KW pro Eintrag",
-      value: formatNumber(stats.avgKW),
-      description: "Durchschnittswert",
-      icon: TrendingUp,
-      color: "text-purple-600",
-      bgColor: "bg-purple-50", 
-      borderColor: "border-l-purple-500"
-    },
-    {
       title: "Top Sparte",
       value: stats.topSparte,
       description: `${formatNumber(stats.topSparteCount)} Einträge`,
@@ -104,33 +86,6 @@ const DashboardStats = ({ data }: DashboardStatsProps) => {
       color: "text-indigo-600",
       bgColor: "bg-indigo-50",
       borderColor: "border-l-indigo-500"
-    },
-    {
-      title: "Top Art",
-      value: stats.topArt,
-      description: `${formatNumber(stats.topArtCount)} Einträge`,
-      icon: Target,
-      color: "text-pink-600",
-      bgColor: "bg-pink-50",
-      borderColor: "border-l-pink-500"
-    },
-    {
-      title: "Dieses Jahr",
-      value: formatNumber(stats.currentYearEntries),
-      description: `${new Date().getFullYear()} Datensätze`,
-      icon: Calendar,
-      color: "text-cyan-600",
-      bgColor: "bg-cyan-50",
-      borderColor: "border-l-cyan-500"
-    },
-    {
-      title: "Sparten Anzahl",
-      value: formatNumber(stats.spartenCount),
-      description: "Verschiedene Sparten",
-      icon: Users,
-      color: "text-emerald-600",
-      bgColor: "bg-emerald-50",
-      borderColor: "border-l-emerald-500"
     }
   ];
 

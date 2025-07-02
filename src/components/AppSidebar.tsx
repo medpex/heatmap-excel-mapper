@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { BarChart3, Map, Settings, Download, TrendingUp, Users, Calendar, Filter } from "lucide-react";
+import { BarChart3, Map, Users } from "lucide-react";
 import { NavLink, useLocation } from "react-router-dom";
 
 import {
@@ -18,15 +18,7 @@ import {
 const mainItems = [
   { title: "Dashboard", url: "/", icon: BarChart3 },
   { title: "Karten-Ansicht", url: "/map", icon: Map },
-  { title: "Trends & Analysen", url: "/analytics", icon: TrendingUp },
   { title: "Vergleiche", url: "/compare", icon: Users },
-];
-
-const toolItems = [
-  { title: "Filter-Presets", url: "/presets", icon: Filter },
-  { title: "Berichte", url: "/reports", icon: Calendar },
-  { title: "Export", url: "/export", icon: Download },
-  { title: "Einstellungen", url: "/settings", icon: Settings },
 ];
 
 export function AppSidebar() {
@@ -72,23 +64,6 @@ export function AppSidebar() {
           </SidebarGroupContent>
         </SidebarGroup>
 
-        <SidebarGroup>
-          <SidebarGroupLabel>Tools</SidebarGroupLabel>
-          <SidebarGroupContent>
-            <SidebarMenu>
-              {toolItems.map((item) => (
-                <SidebarMenuItem key={item.title}>
-                  <SidebarMenuButton asChild>
-                    <NavLink to={item.url} className={getNavCls}>
-                      <item.icon className="h-4 w-4" />
-                      {!collapsed && <span>{item.title}</span>}
-                    </NavLink>
-                  </SidebarMenuButton>
-                </SidebarMenuItem>
-              ))}
-            </SidebarMenu>
-          </SidebarGroupContent>
-        </SidebarGroup>
 
         <div className="mt-auto p-4">
           {!collapsed && (

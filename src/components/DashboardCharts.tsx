@@ -77,7 +77,7 @@ const DashboardCharts = ({ data }: DashboardChartsProps) => {
   }, [data]);
 
   return (
-    <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+    <div className="grid grid-cols-1 gap-6">
       {/* Orte Verteilung */}
       <Card className="shadow-soft">
         <CardHeader>
@@ -104,106 +104,6 @@ const DashboardCharts = ({ data }: DashboardChartsProps) => {
               />
               <Bar dataKey="value" fill="#3b82f6" radius={[4, 4, 0, 0]} />
             </BarChart>
-          </ResponsiveContainer>
-        </CardContent>
-      </Card>
-
-      {/* Sparten Verteilung */}
-      <Card className="shadow-soft">
-        <CardHeader>
-          <CardTitle className="text-lg font-semibold text-foreground">Sparten Verteilung</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <ResponsiveContainer width="100%" height={300}>
-            <PieChart>
-              <Pie
-                data={chartData.spartenData}
-                cx="50%"
-                cy="50%"
-                labelLine={false}
-                label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
-                outerRadius={80}
-                fill="#8884d8"
-                dataKey="value"
-              >
-                {chartData.spartenData.map((entry, index) => (
-                  <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
-                ))}
-              </Pie>
-              <Tooltip 
-                contentStyle={{ 
-                  backgroundColor: 'hsl(var(--background))', 
-                  border: '1px solid hsl(var(--border))',
-                  borderRadius: '6px'
-                }}
-              />
-            </PieChart>
-          </ResponsiveContainer>
-        </CardContent>
-      </Card>
-
-      {/* KW nach Orten */}
-      <Card className="shadow-soft">
-        <CardHeader>
-          <CardTitle className="text-lg font-semibold text-foreground">Top 10 Orte nach KW-Summe</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <ResponsiveContainer width="100%" height={300}>
-            <AreaChart data={chartData.topKwOrte}>
-              <CartesianGrid strokeDasharray="3 3" className="opacity-30" />
-              <XAxis 
-                dataKey="name" 
-                tick={{ fontSize: 12 }}
-                angle={-45}
-                textAnchor="end"
-                height={60}
-              />
-              <YAxis tick={{ fontSize: 12 }} />
-              <Tooltip 
-                contentStyle={{ 
-                  backgroundColor: 'hsl(var(--background))', 
-                  border: '1px solid hsl(var(--border))',
-                  borderRadius: '6px'
-                }}
-              />
-              <Area 
-                type="monotone" 
-                dataKey="kw" 
-                stroke="#10b981" 
-                fill="#10b981" 
-                fillOpacity={0.3}
-              />
-            </AreaChart>
-          </ResponsiveContainer>
-        </CardContent>
-      </Card>
-
-      {/* Zeitreihen-Entwicklung */}
-      <Card className="shadow-soft">
-        <CardHeader>
-          <CardTitle className="text-lg font-semibold text-foreground">Entwicklung über Zeit</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <ResponsiveContainer width="100%" height={300}>
-            <LineChart data={chartData.timelineData}>
-              <CartesianGrid strokeDasharray="3 3" className="opacity-30" />
-              <XAxis dataKey="year" tick={{ fontSize: 12 }} />
-              <YAxis tick={{ fontSize: 12 }} />
-              <Tooltip 
-                contentStyle={{ 
-                  backgroundColor: 'hsl(var(--background))', 
-                  border: '1px solid hsl(var(--border))',
-                  borderRadius: '6px'
-                }}
-              />
-              <Line 
-                type="monotone" 
-                dataKey="count" 
-                stroke="#f59e0b" 
-                strokeWidth={3}
-                dot={{ fill: '#f59e0b', strokeWidth: 2, r: 4 }}
-              />
-            </LineChart>
           </ResponsiveContainer>
         </CardContent>
       </Card>

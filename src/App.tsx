@@ -7,7 +7,6 @@ import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { AppSidebar } from "@/components/AppSidebar";
 import Dashboard from "./pages/Dashboard";
 import MapView from "./pages/MapView";
-import Analytics from "./pages/Analytics";
 import Compare from "./pages/Compare";
 import NotFound from "./pages/NotFound";
 
@@ -33,7 +32,6 @@ const App = () => (
                 <Routes>
                   <Route path="/" element={<Dashboard />} />
                   <Route path="/map" element={<MapView />} />
-                  <Route path="/analytics" element={<Analytics />} />
                   <Route path="/compare" element={<Compare />} />
                   {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
                   <Route path="*" element={<NotFound />} />
