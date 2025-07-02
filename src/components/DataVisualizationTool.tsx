@@ -145,17 +145,7 @@ const DataVisualizationTool = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-white flex flex-col">
-      {/* Header */}
-      <header className="sticky top-0 z-30 w-full bg-white/80 backdrop-blur border-b border-border shadow-sm flex items-center px-6 py-3 gap-4">
-        <MapPin className="h-8 w-8 text-primary" />
-        <h1 className="text-3xl font-bold tracking-tight bg-gradient-to-r from-blue-600 to-green-400 bg-clip-text text-transparent">GeoHeatmap Auswertung</h1>
-        <div className="ml-auto flex items-center gap-2">
-          <button className="p-2 rounded-full hover:bg-primary/10 transition" title="Info / Hilfe">
-            <Info className="h-6 w-6 text-muted-foreground" />
-          </button>
-        </div>
-      </header>
+    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-white flex flex-col">{/* Kein Header mehr nötig, da in App.tsx */}
       <main className="flex flex-1 min-h-0">
         {/* Sidebar */}
         <aside className="w-full max-w-xs bg-white/90 border-r border-border shadow-lg flex flex-col gap-6 p-6 sticky top-[64px] h-[calc(100vh-64px)] z-20">

@@ -1,7 +1,7 @@
 import DataVisualizationTool from '@/components/DataVisualizationTool';
 
-const Index = () => {
+const MapView = () => {
   return <DataVisualizationTool />;
 };
 
-export default Index;
+export default MapView;
