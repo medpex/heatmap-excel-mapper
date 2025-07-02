@@ -17,13 +17,15 @@ L.Icon.Default.mergeOptions({
 
 interface MapComponentProps {
   data: DataRow[];
+  layer: 'heatmap' | 'cluster' | 'marker';
 }
 
-const MapComponent = ({ data }: MapComponentProps) => {
+const MapComponent = ({ data, layer }: MapComponentProps) => {
   const mapContainer = useRef<HTMLDivElement>(null);
   const map = useRef<L.Map | null>(null);
   const clusterGroup = useRef<any>(null);
   const heatmapLayer = useRef<any>(null);
+  const markerLayer = useRef<any>(null);
 
   // Memoize valid data for performance
   const validData = useMemo(() => 
@@ -61,53 +63,55 @@ const MapComponent = ({ data }: MapComponentProps) => {
       }).addTo(map.current);
     }
 
-    // Clear existing layers
+    // Remove all layers
     if (clusterGroup.current) {
       map.current?.removeLayer(clusterGroup.current);
     }
     if (heatmapLayer.current) {
       map.current?.removeLayer(heatmapLayer.current);
     }
+    if (markerLayer.current) {
+      map.current?.removeLayer(markerLayer.current);
+    }
 
     if (validData.length === 0) return;
 
-    // Create marker cluster group for better performance with many markers
-    clusterGroup.current = (L as any).markerClusterGroup({
-      chunkedLoading: true,
-      maxClusterRadius: 50,
-      spiderfyOnMaxZoom: true,
-      showCoverageOnHover: false,
-      zoomToBoundsOnClick: true,
-    });
-
-    // Batch create markers for better performance
-    const markers = validData.map((row) => {
-      const marker = L.marker([row.latitude!, row.longitude!]);
-      
-      const popupContent = `
-        <div class="p-3 min-w-[250px]">
-          <h3 class="font-semibold text-lg mb-2 text-blue-600">${row.Sparte}</h3>
-          <div class="space-y-1 text-sm">
-            <p><strong>Adresse:</strong> ${row['Ort, Strasse Haus-Nr']}</p>
-            <p><strong>PLZ:</strong> ${row.PLZ}</p>
-            <p><strong>Art:</strong> ${row.Art}</p>
-            ${row['KW-Zahl'] ? `<p><strong>KW-Zahl:</strong> ${row['KW-Zahl']}</p>` : ''}
-            ${row.Notiz ? `<p><strong>Notiz:</strong> ${row.Notiz}</p>` : ''}
-            ${row.Datum ? `<p><strong>Datum:</strong> ${row.Datum}</p>` : ''}
+    // Cluster Layer
+    if (layer === 'cluster') {
+      clusterGroup.current = (L as any).markerClusterGroup({
+        chunkedLoading: true,
+        maxClusterRadius: 50,
+        spiderfyOnMaxZoom: true,
+        showCoverageOnHover: false,
+        zoomToBoundsOnClick: true,
+      });
+      const markers = validData.map((row) => {
+        const marker = L.marker([row.latitude!, row.longitude!]);
+        const popupContent = `
+          <div class="p-3 min-w-[250px]">
+            <h3 class="font-semibold text-lg mb-2 text-blue-600">${row.Sparte}</h3>
+            <div class="space-y-1 text-sm">
+              <p><strong>Adresse:</strong> ${row['Ort, Strasse Haus-Nr']}</p>
+              <p><strong>PLZ:</strong> ${row.PLZ}</p>
+              <p><strong>Art:</strong> ${row.Art}</p>
+              ${row['KW-Zahl'] ? `<p><strong>KW-Zahl:</strong> ${row['KW-Zahl']}</p>` : ''}
+              ${row.Notiz ? `<p><strong>Notiz:</strong> ${row.Notiz}</p>` : ''}
+              ${row.Datum ? `<p><strong>Datum:</strong> ${row.Datum}</p>` : ''}
+            </div>
           </div>
-        </div>
-      `;
-      
-      marker.bindPopup(popupContent);
-      return marker;
-    });
+        `;
+        marker.bindPopup(popupContent);
+        return marker;
+      });
+      clusterGroup.current.addLayers(markers);
+      map.current?.addLayer(clusterGroup.current);
+      if (validData.length > 0) {
+        map.current?.fitBounds(clusterGroup.current.getBounds().pad(0.1));
+      }
+    }
 
-    // Add all markers to cluster group at once
-    clusterGroup.current.addLayers(markers);
-    map.current?.addLayer(clusterGroup.current);
-
-    // Add heatmap layer
-    if ((L as any).heatLayer && heatData.length > 0) {
+    // Heatmap Layer
+    if (layer === 'heatmap' && (L as any).heatLayer && heatData.length > 0) {
       heatmapLayer.current = (L as any).heatLayer(heatData, {
         radius: 25,
         blur: 15,
@@ -122,14 +126,39 @@ const MapComponent = ({ data }: MapComponentProps) => {
         }
       });
       map.current?.addLayer(heatmapLayer.current);
+      if (validData.length > 0) {
+        map.current?.fitBounds(L.latLngBounds(validData.map(d => [d.latitude!, d.longitude!])).pad(0.1));
+      }
     }
 
-    // Fit map to show all markers
-    if (validData.length > 0 && clusterGroup.current) {
-      map.current?.fitBounds(clusterGroup.current.getBounds().pad(0.1));
+    // Marker Layer (keine Cluster, nur einzelne Marker)
+    if (layer === 'marker') {
+      markerLayer.current = L.layerGroup();
+      validData.forEach((row) => {
+        const marker = L.marker([row.latitude!, row.longitude!]);
+        const popupContent = `
+          <div class="p-3 min-w-[250px]">
+            <h3 class="font-semibold text-lg mb-2 text-blue-600">${row.Sparte}</h3>
+            <div class="space-y-1 text-sm">
+              <p><strong>Adresse:</strong> ${row['Ort, Strasse Haus-Nr']}</p>
+              <p><strong>PLZ:</strong> ${row.PLZ}</p>
+              <p><strong>Art:</strong> ${row.Art}</p>
+              ${row['KW-Zahl'] ? `<p><strong>KW-Zahl:</strong> ${row['KW-Zahl']}</p>` : ''}
+              ${row.Notiz ? `<p><strong>Notiz:</strong> ${row.Notiz}</p>` : ''}
+              ${row.Datum ? `<p><strong>Datum:</strong> ${row.Datum}</p>` : ''}
+            </div>
+          </div>
+        `;
+        marker.bindPopup(popupContent);
+        markerLayer.current.addLayer(marker);
+      });
+      map.current?.addLayer(markerLayer.current);
+      if (validData.length > 0) {
+        map.current?.fitBounds(L.latLngBounds(validData.map(d => [d.latitude!, d.longitude!])).pad(0.1));
+      }
     }
 
-  }, [validData, heatData]);
+  }, [validData, heatData, layer]);
 
   // Cleanup on component unmount
   useEffect(() => {

@@ -1,0 +1,36 @@
+version: '3.8'
+services:
+  backend:
+    build: ./server
+    environment:
+      - PGHOST=10.0.0.78
+      - PGPORT=5432
+      - PGUSER=postgres
+      - PGPASSWORD=J123654789j
+      - PGDATABASE=postgres
+      - PORT=4000
+    ports:
+      - "4000:4000"
+    restart: unless-stopped
+  frontend:
+    build: .
+    environment:
+      - VITE_API_URL=http://localhost:4000/api
+    ports:
+      - "3001:80"
+    depends_on:
+      - backend
+    restart: unless-stopped
+# Optional: PostgreSQL-Container, falls gewünscht
+#  db:
+#    image: postgres:15-alpine
+#    environment:
+#      - POSTGRES_USER=postgres
+#      - POSTGRES_PASSWORD=J123654789j
+#      - POSTGRES_DB=postgres
+#    ports:
+#      - "5432:5432"
+#    volumes:
+#      - pgdata:/var/lib/postgresql/data
+#volumes:
+#  pgdata: 

@@ -1,16 +1,9 @@
-import { useState, useCallback } from 'react';
+import { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Badge } from '@/components/ui/badge';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { MapPin, Upload, BarChart3, Filter, Download } from 'lucide-react';
-import * as XLSX from 'xlsx';
+import { MapPin, Info, RefreshCw, Download, Search } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import MapComponent from './MapComponent';
-import DataTable from './DataTable';
-import VirtualizedDataTable from './VirtualizedDataTable';
-import StatsCards from './StatsCards';
+import FilterSidebar from './FilterSidebar';
 
 export interface DataRow {
   'Geändert am'?: string;
@@ -23,262 +16,283 @@ export interface DataRow {
   'Ort, Strasse Haus-Nr': string;
   'Datum'?: string;
   'Notiz'?: string;
-  'KW-Zahl'?: number;
+  'KW-Zahl'?: number | string;
   'Art': string;
   latitude?: number;
   longitude?: number;
+  _table: string;
+}
+
+const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:4000/api';
+const TABLES = [
+  'Gefilterte_Adressen_Geesthacht',
+  'Gefilterte_Adressen_Gülzow',
+  'Gefilterte_Adressen_Hamwarde',
+  'Gefilterte_Adressen_Kollow',
+  'Gefilterte_Adressen_Wiershop',
+  'Gefilterte_Adressen_Worth',
+];
+
+function getYear(dateStr?: string) {
+  if (!dateStr) return '';
+  try {
+    return new Date(dateStr).getFullYear().toString();
+  } catch {
+    return '';
+  }
+}
+
+function unique<T>(arr: T[]): T[] {
+  return Array.from(new Set(arr.filter(Boolean)));
+}
+
+function toCSV(rows: DataRow[]): string {
+  if (!rows.length) return '';
+  const keys = Object.keys(rows[0]);
+  const csv = [keys.join(',')].concat(
+    rows.map(row => keys.map(k => `"${(row as any)[k] ?? ''}"`).join(','))
+  );
+  return csv.join('\n');
 }
 
 const DataVisualizationTool = () => {
-  const [data, setData] = useState<DataRow[]>([]);
-  const [filteredData, setFilteredData] = useState<DataRow[]>([]);
-  const [filters, setFilters] = useState({
-    sparte: '',
-    ort: '',
-    art: '',
-    plz: ''
-  });
+  const [allGeoData, setAllGeoData] = useState<DataRow[]>([]);
+  const [progress, setProgress] = useState(0);
+  const [isGeocoding, setIsGeocoding] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
+  const [currentAddress, setCurrentAddress] = useState('');
+  const [ortFilter, setOrtFilter] = useState<string[]>([]);
+  const [plzFilter, setPlzFilter] = useState<string[]>([]);
+  const [jahrRange, setJahrRange] = useState<[number, number]>([2000, 2024]);
+  const [artFilter, setArtFilter] = useState<string[]>([]);
+  const [kwRange, setKwRange] = useState<[number, number]>([0, 100]);
+  const [layer, setLayer] = useState<'heatmap' | 'cluster' | 'marker'>('heatmap');
+  const [search, setSearch] = useState('');
   const { toast } = useToast();
 
-  const geocodeBatch = async (batch: DataRow[]) => {
-    return Promise.all(
-      batch.map(async (row) => {
+  useEffect(() => {
+    const processAllTables = async () => {
+      setIsLoading(true);
+      let allData: DataRow[] = [];
+      for (const table of TABLES) {
         try {
-          const address = `${row.Strasse} ${row['Haus-Nr']}, ${row.PLZ} ${row.Ort}, Deutschland`;
-          await new Promise(resolve => setTimeout(resolve, 100)); // Rate limiting
-          const response = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(address)}&limit=1`);
-          const geocodeResult = await response.json();
-          
-          if (geocodeResult.length > 0) {
-            return {
-              ...row,
-              latitude: parseFloat(geocodeResult[0].lat),
-              longitude: parseFloat(geocodeResult[0].lon)
-            };
-          }
-          return row;
+          const res = await fetch(`${API_URL}/data/${table}`);
+          if (!res.ok) throw new Error('Fehler beim Laden der Daten');
+          const json: DataRow[] = await res.json();
+          allData = allData.concat(json.map(row => ({ ...row, _table: table })));
         } catch (error) {
-          console.warn('Geocoding failed for:', row.Ort, error);
-          return row;
+          toast({ title: `Fehler bei ${table}`, description: 'Konnte keine Daten laden', variant: 'destructive' });
         }
-      })
-    );
-  };
-
-  const handleFileUpload = useCallback(async (event: React.ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0];
-    if (!file) return;
-
-    setIsLoading(true);
-    try {
-      const arrayBuffer = await file.arrayBuffer();
-      const workbook = XLSX.read(arrayBuffer, { type: 'array' });
-      const sheetName = workbook.SheetNames[0];
-      const worksheet = workbook.Sheets[sheetName];
-      const jsonData = XLSX.utils.sheet_to_json(worksheet) as DataRow[];
-
-      // Process geocoding in batches for better performance
-      const batchSize = 10;
-      const batches = [];
-      for (let i = 0; i < jsonData.length; i += batchSize) {
-        batches.push(jsonData.slice(i, i + batchSize));
       }
-
-      const dataWithCoords: DataRow[] = [];
-      for (let i = 0; i < batches.length; i++) {
-        const batchResults = await geocodeBatch(batches[i]);
-        dataWithCoords.push(...batchResults);
-        
-        // Update progress
-        toast({
-          title: `Geocoding Progress: ${Math.round(((i + 1) / batches.length) * 100)}%`,
-          description: `${dataWithCoords.length} von ${jsonData.length} Datensätze verarbeitet`,
-        });
+      setAllGeoData(allData);
+      setIsGeocoding(true);
+      let geocoded = [...allData];
+      let toGeocode = geocoded.filter(d => !d.latitude || !d.longitude);
+      for (let i = 0; i < toGeocode.length; i++) {
+        const d = toGeocode[i];
+        const address = `${d.Strasse} ${d['Haus-Nr']}, ${d.PLZ} ${d.Ort}, Deutschland`;
+        setCurrentAddress(address);
+        try {
+          await new Promise(resolve => setTimeout(resolve, 2000));
+          const response = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(address)}&limit=1`);
+          if (!response.ok) throw new Error('Nominatim nicht erreichbar');
+          const geocodeResult = await response.json();
+          if (geocodeResult.length > 0) {
+            d.latitude = parseFloat(geocodeResult[0].lat);
+            d.longitude = parseFloat(geocodeResult[0].lon);
+            // Koordinaten in der DB speichern
+            await fetch(`${API_URL}/update-coords/${d._table}`, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                plz: d.PLZ,
+                ort: d.Ort,
+                strasse: d.Strasse,
+                hausnr: d['Haus-Nr'],
+                latitude: d.latitude,
+                longitude: d.longitude
+              })
+            });
+          } else {
+            toast({ title: 'Geokodierung fehlgeschlagen', description: `Keine Koordinaten für: ${address}`, variant: 'destructive' });
+          }
+        } catch (error) {
+          toast({ title: 'Geokodierung fehlgeschlagen', description: `Fehler für: ${address}`, variant: 'destructive' });
+        }
+        setProgress(Math.round(((i + 1) / toGeocode.length) * 100));
+        setAllGeoData([...geocoded]);
       }
-
-      setData(dataWithCoords);
-      setFilteredData(dataWithCoords);
-      
-      toast({
-        title: "Datei erfolgreich hochgeladen",
-        description: `${dataWithCoords.length} Datensätze importiert und geocodiert`,
-      });
-    } catch (error) {
-      toast({
-        title: "Fehler beim Laden der Datei",
-        description: "Bitte überprüfen Sie das Dateiformat",
-        variant: "destructive"
-      });
-    } finally {
+      setIsGeocoding(false);
+      setCurrentAddress('');
       setIsLoading(false);
-    }
+      toast({ title: 'Geokodierung abgeschlossen', description: `${geocoded.filter(d => d.latitude && d.longitude).length} Datensätze mit Koordinaten` });
+    };
+    processAllTables();
   }, [toast]);
 
-  const applyFilters = useCallback(() => {
-    let filtered = data;
-    
-    if (filters.sparte) {
-      filtered = filtered.filter(row => 
-        row.Sparte?.toLowerCase().includes(filters.sparte.toLowerCase())
-      );
-    }
-    if (filters.ort) {
-      filtered = filtered.filter(row => 
-        row.Ort?.toLowerCase().includes(filters.ort.toLowerCase())
-      );
-    }
-    if (filters.art) {
-      filtered = filtered.filter(row => 
-        row.Art?.toLowerCase().includes(filters.art.toLowerCase())
-      );
-    }
-    if (filters.plz) {
-      filtered = filtered.filter(row => 
-        row.PLZ?.includes(filters.plz)
-      );
-    }
-    
-    setFilteredData(filtered);
-  }, [data, filters]);
+  // Filteroptionen berechnen
+  const ortOptions = unique(allGeoData.map(d => d.Ort));
+  const jahrOptions = unique(allGeoData.map(d => getYear(d.Datum))).map(Number).filter(Boolean).sort((a, b) => a - b);
+  const artOptions = unique(allGeoData.map(d => d.Art));
+  // KW-Zahl Bereich
+  const kwValues = allGeoData.map(d => typeof d['KW-Zahl'] === 'number' ? d['KW-Zahl'] : parseFloat(d['KW-Zahl'] as string)).filter(v => !isNaN(v));
+  const kwMinValue = kwValues.length ? Math.min(...kwValues) : 0;
+  const kwMaxValue = kwValues.length ? Math.max(...kwValues) : 100;
+  const jahrMinValue = jahrOptions.length ? Math.min(...jahrOptions) : 2000;
+  const jahrMaxValue = jahrOptions.length ? Math.max(...jahrOptions) : 2024;
 
-  const exportData = useCallback(() => {
-    const ws = XLSX.utils.json_to_sheet(filteredData);
-    const wb = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(wb, ws, "Daten");
-    XLSX.writeFile(wb, "gefilterte_daten.xlsx");
-    
-    toast({
-      title: "Export erfolgreich",
-      description: "Daten wurden als Excel-Datei gespeichert",
-    });
-  }, [filteredData, toast]);
+  // Gefilterte Daten für die Map
+  const geoData = allGeoData.filter(d =>
+    d.latitude && d.longitude &&
+    (ortFilter.length === 0 || ortFilter.includes(d.Ort)) &&
+    (artFilter.length === 0 || artFilter.includes(d.Art)) &&
+    (typeof d['KW-Zahl'] === 'undefined' || isNaN(Number(d['KW-Zahl'])) || (Number(d['KW-Zahl']) >= kwRange[0] && Number(d['KW-Zahl']) <= kwRange[1])) &&
+    (getYear(d.Datum) === '' || (Number(getYear(d.Datum)) >= jahrRange[0] && Number(getYear(d.Datum)) <= jahrRange[1])) &&
+    (search === '' || d['Ort, Strasse Haus-Nr'].toLowerCase().includes(search.toLowerCase()))
+  );
+
+  // Statistik-Karten
+  const stats = {
+    count: geoData.length,
+    sumKW: geoData.reduce((sum, d) => sum + (Number(d['KW-Zahl']) || 0), 0),
+    topArt: (() => {
+      const counts: Record<string, number> = {};
+      geoData.forEach(d => { counts[d.Art] = (counts[d.Art] || 0) + 1; });
+      return Object.entries(counts).sort((a, b) => b[1] - a[1])[0]?.[0] || '-';
+    })(),
+    uniqueOrte: new Set(geoData.map(d => d.Ort)).size,
+  };
+
+  // Reset-Handler für Filter und Map
+  const handleReset = () => {
+    setOrtFilter([]);
+    setPlzFilter([]);
+    setJahrRange([jahrMinValue, jahrMaxValue]);
+    setArtFilter([]);
+    setKwRange([kwMinValue, kwMaxValue]);
+    setLayer('heatmap');
+    setSearch('');
+  };
+
+  // Export-Handler
+  const handleExport = () => {
+    const csv = toCSV(geoData);
+    const blob = new Blob([csv], { type: 'text/csv' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'geodaten.csv';
+    a.click();
+    URL.revokeObjectURL(url);
+  };
 
   return (
-    <div className="min-h-screen bg-background p-4 space-y-6">
-      <header className="text-center space-y-4">
-        <div className="flex items-center justify-center gap-3">
-          <div className="bg-gradient-primary p-3 rounded-lg shadow-medium">
-            <MapPin className="h-8 w-8 text-primary-foreground" />
-          </div>
-          <h1 className="text-4xl font-bold bg-gradient-primary bg-clip-text text-transparent">
-            Geodaten Visualisierung
-          </h1>
+    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-white flex flex-col">
+      {/* Header */}
+      <header className="sticky top-0 z-30 w-full bg-white/80 backdrop-blur border-b border-border shadow-sm flex items-center px-6 py-3 gap-4">
+        <MapPin className="h-8 w-8 text-primary" />
+        <h1 className="text-3xl font-bold tracking-tight bg-gradient-to-r from-blue-600 to-green-400 bg-clip-text text-transparent">GeoHeatmap Auswertung</h1>
+        <div className="ml-auto flex items-center gap-2">
+          <button className="p-2 rounded-full hover:bg-primary/10 transition" title="Info / Hilfe">
+            <Info className="h-6 w-6 text-muted-foreground" />
+          </button>
         </div>
-        <p className="text-muted-foreground text-lg max-w-2xl mx-auto">
-          Importieren Sie Ihre Excel-Daten und visualisieren Sie sie als interaktive Karte mit Heatmap-Funktionalität
-        </p>
       </header>
-
-      <Card className="shadow-medium">
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Upload className="h-5 w-5 text-primary" />
-            Datei-Upload
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="flex items-center gap-4">
-            <Input
-              type="file"
-              accept=".xlsx,.xls"
-              onChange={handleFileUpload}
-              disabled={isLoading}
-              className="max-w-md"
-            />
-            <Badge variant="secondary" className="whitespace-nowrap">
-              {data.length} Datensätze
-            </Badge>
-            {data.length > 0 && (
-              <Button 
-                onClick={exportData} 
-                variant="outline" 
-                size="sm"
-                className="ml-auto"
-              >
-                <Download className="h-4 w-4 mr-2" />
-                Export
-              </Button>
-            )}
+      <main className="flex flex-1 min-h-0">
+        {/* Sidebar */}
+        <aside className="w-full max-w-xs bg-white/90 border-r border-border shadow-lg flex flex-col gap-6 p-6 sticky top-[64px] h-[calc(100vh-64px)] z-20">
+          <FilterSidebar
+            ortFilter={ortFilter}
+            setOrtFilter={setOrtFilter}
+            ortOptions={ortOptions}
+            jahrRange={jahrRange}
+            setJahrRange={setJahrRange}
+            jahrMinValue={jahrMinValue}
+            jahrMaxValue={jahrMaxValue}
+            kwRange={kwRange}
+            setKwRange={setKwRange}
+            kwMinValue={kwMinValue}
+            kwMaxValue={kwMaxValue}
+            artFilter={artFilter}
+            setArtFilter={setArtFilter}
+            artOptions={artOptions}
+            search={search}
+            setSearch={setSearch}
+          />
+          <div>
+            <h2 className="text-lg font-semibold mb-2">Darstellung</h2>
+            <select value={layer} onChange={e => setLayer(e.target.value as any)} className="border rounded px-2 py-1 w-full">
+              <option value="heatmap">Heatmap</option>
+              <option value="cluster">Cluster</option>
+              <option value="marker">Marker</option>
+            </select>
           </div>
-        </CardContent>
-      </Card>
-
-      {data.length > 0 && (
-        <>
-          <Card className="shadow-medium">
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Filter className="h-5 w-5 text-primary" />
-                Filter
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                <Input
-                  placeholder="Sparte filtern..."
-                  value={filters.sparte}
-                  onChange={(e) => setFilters({...filters, sparte: e.target.value})}
-                  onBlur={applyFilters}
-                />
-                <Input
-                  placeholder="Ort filtern..."
-                  value={filters.ort}
-                  onChange={(e) => setFilters({...filters, ort: e.target.value})}
-                  onBlur={applyFilters}
-                />
-                <Input
-                  placeholder="Art filtern..."
-                  value={filters.art}
-                  onChange={(e) => setFilters({...filters, art: e.target.value})}
-                  onBlur={applyFilters}
-                />
-                <Input
-                  placeholder="PLZ filtern..."
-                  value={filters.plz}
-                  onChange={(e) => setFilters({...filters, plz: e.target.value})}
-                  onBlur={applyFilters}
-                />
+          <button onClick={handleReset} className="mt-4 flex items-center gap-2 px-4 py-2 rounded-full bg-gradient-to-r from-blue-500 to-green-400 text-white font-semibold shadow hover:scale-105 transition">
+            <RefreshCw className="h-5 w-5" />
+            Filter & Ansicht zurücksetzen
+          </button>
+          <button onClick={handleExport} className="mt-2 flex items-center gap-2 px-4 py-2 rounded-full bg-gradient-to-r from-green-400 to-blue-500 text-white font-semibold shadow hover:scale-105 transition" title="Gefilterte Daten als CSV exportieren">
+            <Download className="h-5 w-5" />
+            Export (CSV)
+          </button>
+          <div className="mt-auto text-xs text-muted-foreground text-center">
+            <span>© {new Date().getFullYear()} GeoHeatmap</span>
+          </div>
+        </aside>
+        {/* Map-Bereich */}
+        <section className="flex-1 flex flex-col items-center justify-center bg-gradient-to-br from-blue-100 to-green-50 relative">
+          {/* Dashboard-Kacheln */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4 w-full max-w-5xl mx-auto mt-6 mb-2">
+            <Card className="flex flex-col items-center justify-center bg-gradient-to-br from-blue-50 to-blue-100 shadow-lg border-0 py-6 px-2 rounded-2xl min-h-[120px]">
+              <MapPin className="h-8 w-8 text-blue-600 mb-1" />
+              <span className="text-2xl font-bold text-blue-700 tracking-tight leading-tight">{stats.count}</span>
+              <span className="text-xs font-medium text-blue-700 mt-0.5">Adressen</span>
+            </Card>
+            <Card className="flex flex-col items-center justify-center bg-gradient-to-br from-green-50 to-green-100 shadow-lg border-0 py-6 px-2 rounded-2xl min-h-[120px]">
+              <span className="inline-block h-8 w-8 mb-1 rounded-full bg-green-200 flex items-center justify-center"><span className="text-green-700 font-bold text-base">kW</span></span>
+              <span className="text-2xl font-bold text-green-700 tracking-tight leading-tight">{stats.sumKW}</span>
+              <span className="text-xs font-medium text-green-700 mt-0.5">Summe KW</span>
+            </Card>
+            <Card className="flex flex-col items-center justify-center bg-gradient-to-br from-indigo-50 to-indigo-100 shadow-lg border-0 py-6 px-2 rounded-2xl min-h-[120px]">
+              <span className="inline-block h-8 w-8 mb-1 rounded-full bg-indigo-200 flex items-center justify-center"><span className="text-indigo-700 font-bold text-base">Art</span></span>
+              <span className="text-lg font-bold text-indigo-700 tracking-tight leading-tight">{stats.topArt}</span>
+              <span className="text-xs font-medium text-indigo-700 mt-0.5">Häufigste Art</span>
+            </Card>
+            <Card className="flex flex-col items-center justify-center bg-gradient-to-br from-orange-50 to-orange-100 shadow-lg border-0 py-6 px-2 rounded-2xl min-h-[120px]">
+              <span className="inline-block h-8 w-8 mb-1 rounded-full bg-orange-200 flex items-center justify-center"><span className="text-orange-700 font-bold text-base">Ort</span></span>
+              <span className="text-2xl font-bold text-orange-700 tracking-tight leading-tight">{stats.uniqueOrte}</span>
+              <span className="text-xs font-medium text-orange-700 mt-0.5">Orte</span>
+            </Card>
+          </div>
+          {isGeocoding && currentAddress && (
+            <div className="absolute top-8 left-1/2 -translate-x-1/2 z-30 w-full max-w-xl">
+              <div className="bg-white/90 rounded-lg shadow-lg p-4 border border-blue-200">
+                <div className="text-xl font-bold text-blue-700 mb-2">Verarbeite: {currentAddress}</div>
+                <div className="w-full">
+                  <div className="bg-gray-200 rounded-full h-4">
+                    <div className="bg-blue-500 h-4 rounded-full transition-all duration-300" style={{ width: `${progress}%` }} />
+                  </div>
+                  <div className="text-center mt-2 text-sm text-gray-600">Geokodiere... {progress}%</div>
+                </div>
               </div>
-            </CardContent>
-          </Card>
-
-          <StatsCards data={filteredData} />
-
-          <Tabs defaultValue="map" className="w-full">
-            <TabsList className="grid w-full grid-cols-2">
-              <TabsTrigger value="map" className="flex items-center gap-2">
-                <MapPin className="h-4 w-4" />
-                Karten-Ansicht
-              </TabsTrigger>
-              <TabsTrigger value="table" className="flex items-center gap-2">
-                <BarChart3 className="h-4 w-4" />
-                Tabellen-Ansicht
-              </TabsTrigger>
-            </TabsList>
-            
-            <TabsContent value="map" className="mt-6">
-              <Card className="shadow-medium">
-                <CardContent className="p-0">
-                  <MapComponent data={filteredData} />
-                </CardContent>
-              </Card>
-            </TabsContent>
-            
-            <TabsContent value="table" className="mt-6">
-              <Card className="shadow-medium">
-                <CardContent className="p-6">
-                  {filteredData.length > 1000 ? (
-                    <VirtualizedDataTable data={filteredData} />
-                  ) : (
-                    <DataTable data={filteredData} />
-                  )}
-                </CardContent>
-              </Card>
-            </TabsContent>
-          </Tabs>
-        </>
-      )}
+            </div>
+          )}
+          <div className="w-full max-w-6xl mx-auto flex-1 flex flex-col">
+            <Card className="shadow-2xl border-2 border-blue-100">
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <MapPin className="h-5 w-5 text-primary" />
+                  Karten-Ansicht
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="p-0">
+                <MapComponent data={geoData} layer={layer} />
+              </CardContent>
+            </Card>
+          </div>
+        </section>
+      </main>
+      {/* Platz für Onboarding/Info-Dialog (später) */}
     </div>
   );
 };
