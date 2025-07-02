@@ -101,22 +101,15 @@ const Analytics = () => {
   // Anschlüsse nach Art
   const connectionsByType = Object.entries(
     allData.reduce((acc, row) => {
-      acc[row.Art] = (acc[row.Art] || 0) + 1;
+      if (row.Art && row.Art !== 'NaN') { // Filter out NaN entries
+        acc[row.Art] = (acc[row.Art] || 0) + 1;
+      }
       return acc;
     }, {} as Record<string, number>)
   )
     .map(([art, count]) => ({ art: art.length > 20 ? art.substring(0, 20) + '...' : art, fullArt: art, count }))
     .sort((a, b) => b.count - a.count);
 
-  // Anschlüsse nach Sparten
-  const connectionsBySparte = Object.entries(
-    allData.reduce((acc, row) => {
-      acc[row.Sparte] = (acc[row.Sparte] || 0) + 1;
-      return acc;
-    }, {} as Record<string, number>)
-  )
-    .map(([sparte, count]) => ({ sparte, count }))
-    .sort((a, b) => b.count - a.count);
 
   if (isLoading) {
     return (
@@ -250,26 +243,6 @@ const Analytics = () => {
             </CardContent>
           </Card>
 
-          {/* Anschlüsse nach Sparten */}
-          <Card className="shadow-medium">
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <TrendingUp className="h-5 w-5 text-primary" />
-                Anschlüsse nach Sparten
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <ResponsiveContainer width="100%" height={300}>
-                <BarChart data={connectionsBySparte}>
-                  <CartesianGrid strokeDasharray="3 3" />
-                  <XAxis dataKey="sparte" />
-                  <YAxis />
-                  <Tooltip />
-                  <Bar dataKey="count" fill="#F59E0B" />
-                </BarChart>
-              </ResponsiveContainer>
-            </CardContent>
-          </Card>
         </div>
 
         {/* Baujahr-Analyse Tabelle */}
