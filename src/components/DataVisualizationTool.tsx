@@ -24,7 +24,7 @@ export interface DataRow {
   _table: string;
 }
 
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:4000/api';
+const API_URL = import.meta.env.VITE_API_URL || 'http://10.0.0.75:4000/api';
 const TABLES = [
   'Gefilterte_Adressen_Geesthacht',
   'Gefilterte_Adressen_Gülzow',
