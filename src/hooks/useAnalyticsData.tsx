@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { useToast } from '@/hooks/use-toast';
 import { DataRow } from '@/components/DataVisualizationTool';
 
-const API_URL = import.meta.env.VITE_API_URL || 'http://10.0.0.75:4000/api';
+const API_URL = import.meta.env.VITE_API_URL || 'https://geoanalytics.home-ki.eu:4000/api';
 const TABLES = [
   'Gefilterte_Adressen_Geesthacht',
   'Gefilterte_Adressen_Gülzow',
