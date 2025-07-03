@@ -91,35 +91,26 @@ const Compare = () => {
           filteredData = [];
       }
 
-      const totalKW = filteredData.reduce((sum, row) => sum + (Number(row['KW-Zahl']) || 0), 0);
-      const avgKW = filteredData.length > 0 ? totalKW / filteredData.length : 0;
-      const uniqueArten = new Set(filteredData.map(row => row.Art)).size;
+      const uniqueArten = new Set(filteredData.map(row => row.Art).filter(art => art !== 'NaN')).size;
       const uniqueSparten = new Set(filteredData.map(row => row.Sparte)).size;
 
       return {
         name: item,
         anzahl: filteredData.length,
-        totalKW: Math.round(totalKW),
-        avgKW: Math.round(avgKW * 100) / 100,
         uniqueArten,
         uniqueSparten: compareType !== 'sparten' ? uniqueSparten : 1,
-        density: filteredData.length > 0 ? Math.round((totalKW / filteredData.length) * 100) / 100 : 0
       };
     });
 
     // Für Radar Chart normalisieren
     const maxValues = {
       anzahl: Math.max(...stats.map(s => s.anzahl)),
-      totalKW: Math.max(...stats.map(s => s.totalKW)),
-      avgKW: Math.max(...stats.map(s => s.avgKW)),
       uniqueArten: Math.max(...stats.map(s => s.uniqueArten)),
       uniqueSparten: Math.max(...stats.map(s => s.uniqueSparten))
     };
 
     const radarData = [
       { subject: 'Anzahl', ...Object.fromEntries(stats.map(s => [s.name, (s.anzahl / maxValues.anzahl) * 100])) },
-      { subject: 'Total KW', ...Object.fromEntries(stats.map(s => [s.name, (s.totalKW / maxValues.totalKW) * 100])) },
-      { subject: 'Ø KW', ...Object.fromEntries(stats.map(s => [s.name, (s.avgKW / maxValues.avgKW) * 100])) },
       { subject: 'Arten', ...Object.fromEntries(stats.map(s => [s.name, (s.uniqueArten / maxValues.uniqueArten) * 100])) },
       { subject: 'Sparten', ...Object.fromEntries(stats.map(s => [s.name, (s.uniqueSparten / maxValues.uniqueSparten) * 100])) },
     ];
@@ -209,14 +200,6 @@ const Compare = () => {
                     <span className="font-semibold">{stat.anzahl}</span>
                   </div>
                   <div className="flex items-center justify-between">
-                    <span className="text-xs text-muted-foreground">Total KW:</span>
-                    <span className="font-semibold">{stat.totalKW}</span>
-                  </div>
-                  <div className="flex items-center justify-between">
-                    <span className="text-xs text-muted-foreground">Ø KW:</span>
-                    <span className="font-semibold">{stat.avgKW}</span>
-                  </div>
-                  <div className="flex items-center justify-between">
                     <span className="text-xs text-muted-foreground">Arten:</span>
                     <span className="font-semibold">{stat.uniqueArten}</span>
                   </div>
@@ -225,50 +208,26 @@ const Compare = () => {
             ))}
           </div>
 
-          {/* Vergleichscharts */}
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            {/* Bar Chart - Anzahl */}
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <BarChart3 className="h-5 w-5" />
-                  Anzahl Vergleich
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <ResponsiveContainer width="100%" height={300}>
-                  <BarChart data={comparisonData.stats}>
-                    <CartesianGrid strokeDasharray="3 3" />
-                    <XAxis dataKey="name" />
-                    <YAxis />
-                    <Tooltip />
-                    <Bar dataKey="anzahl" fill="#3b82f6" />
-                  </BarChart>
-                </ResponsiveContainer>
-              </CardContent>
-            </Card>
-
-            {/* Bar Chart - Total KW */}
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <Zap className="h-5 w-5" />
-                  KW-Summe Vergleich
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <ResponsiveContainer width="100%" height={300}>
-                  <BarChart data={comparisonData.stats}>
-                    <CartesianGrid strokeDasharray="3 3" />
-                    <XAxis dataKey="name" />
-                    <YAxis />
-                    <Tooltip />
-                    <Bar dataKey="totalKW" fill="#10b981" />
-                  </BarChart>
-                </ResponsiveContainer>
-              </CardContent>
-            </Card>
-          </div>
+          {/* Vergleichschart */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <BarChart3 className="h-5 w-5" />
+                Anzahl Vergleich
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <ResponsiveContainer width="100%" height={300}>
+                <BarChart data={comparisonData.stats}>
+                  <CartesianGrid strokeDasharray="3 3" />
+                  <XAxis dataKey="name" />
+                  <YAxis />
+                  <Tooltip />
+                  <Bar dataKey="anzahl" fill="#3b82f6" />
+                </BarChart>
+              </ResponsiveContainer>
+            </CardContent>
+          </Card>
 
           {/* Radar Chart */}
           <Card>

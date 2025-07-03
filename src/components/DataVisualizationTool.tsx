@@ -64,7 +64,7 @@ const DataVisualizationTool = () => {
   const [plzFilter, setPlzFilter] = useState<string[]>([]);
   const [jahrRange, setJahrRange] = useState<[number, number]>([2000, 2024]);
   const [artFilter, setArtFilter] = useState<string[]>([]);
-  const [kwRange, setKwRange] = useState<[number, number]>([0, 100]);
+  
   const [layer, setLayer] = useState<'heatmap' | 'cluster' | 'marker'>('heatmap');
   const [search, setSearch] = useState('');
   const { toast } = useToast();
@@ -94,9 +94,6 @@ const DataVisualizationTool = () => {
   const ortOptions = unique(allGeoData.map(d => d.Ort));
   const jahrOptions = unique(allGeoData.map(d => getYear(d.Datum))).map(Number).filter(Boolean).sort((a, b) => a - b);
   const artOptions = unique(allGeoData.map(d => d.Art));
-  const kwValues = allGeoData.map(d => typeof d['KW-Zahl'] === 'number' ? d['KW-Zahl'] : parseFloat(d['KW-Zahl'] as string)).filter(v => !isNaN(v));
-  const kwMinValue = kwValues.length ? Math.min(...kwValues) : 0;
-  const kwMaxValue = kwValues.length ? Math.max(...kwValues) : 100;
   const jahrMinValue = jahrOptions.length ? Math.min(...jahrOptions) : 2000;
   const jahrMaxValue = jahrOptions.length ? Math.max(...jahrOptions) : 2024;
 
@@ -104,8 +101,7 @@ const DataVisualizationTool = () => {
   const geoData = allGeoData.filter(d =>
     d.latitude && d.longitude &&
     (ortFilter.length === 0 || ortFilter.includes(d.Ort)) &&
-    (artFilter.length === 0 || artFilter.includes(d.Art)) &&
-    (typeof d['KW-Zahl'] === 'undefined' || isNaN(Number(d['KW-Zahl'])) || (Number(d['KW-Zahl']) >= kwRange[0] && Number(d['KW-Zahl']) <= kwRange[1])) &&
+    (artFilter.length === 0 || artFilter.includes(d.Art) && d.Art !== 'NaN') &&
     (getYear(d.Datum) === '' || (Number(getYear(d.Datum)) >= jahrRange[0] && Number(getYear(d.Datum)) <= jahrRange[1])) &&
     (search === '' || d['Ort, Strasse Haus-Nr'].toLowerCase().includes(search.toLowerCase()))
   );
@@ -113,10 +109,13 @@ const DataVisualizationTool = () => {
   // Statistiken
   const stats = {
     count: geoData.length,
-    sumKW: geoData.reduce((sum, d) => sum + (Number(d['KW-Zahl']) || 0), 0),
     topArt: (() => {
       const counts: Record<string, number> = {};
-      geoData.forEach(d => { counts[d.Art] = (counts[d.Art] || 0) + 1; });
+      geoData.forEach(d => { 
+        if (d.Art && d.Art !== 'NaN') {
+          counts[d.Art] = (counts[d.Art] || 0) + 1; 
+        }
+      });
       return Object.entries(counts).sort((a, b) => b[1] - a[1])[0]?.[0] || '-';
     })(),
     uniqueOrte: new Set(geoData.map(d => d.Ort)).size,
@@ -127,7 +126,6 @@ const DataVisualizationTool = () => {
     setPlzFilter([]);
     setJahrRange([jahrMinValue, jahrMaxValue]);
     setArtFilter([]);
-    setKwRange([kwMinValue, kwMaxValue]);
     setLayer('heatmap');
     setSearch('');
   };
@@ -190,7 +188,6 @@ const DataVisualizationTool = () => {
               </CardContent>
             </Card>
             
-            
             <Card className="bg-gradient-to-br from-purple-50 to-purple-100 border-purple-200">
               <CardContent className="p-4">
                 <div className="flex items-center gap-3">
@@ -233,10 +230,6 @@ const DataVisualizationTool = () => {
                 setJahrRange={setJahrRange}
                 jahrMinValue={jahrMinValue}
                 jahrMaxValue={jahrMaxValue}
-                kwRange={kwRange}
-                setKwRange={setKwRange}
-                kwMinValue={kwMinValue}
-                kwMaxValue={kwMaxValue}
                 artFilter={artFilter}
                 setArtFilter={setArtFilter}
                 artOptions={artOptions}

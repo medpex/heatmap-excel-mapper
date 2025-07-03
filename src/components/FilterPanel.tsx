@@ -14,10 +14,6 @@ interface FilterPanelProps {
   setJahrRange: (value: [number, number]) => void;
   jahrMinValue: number;
   jahrMaxValue: number;
-  kwRange: [number, number];
-  setKwRange: (value: [number, number]) => void;
-  kwMinValue: number;
-  kwMaxValue: number;
   artFilter: string[];
   setArtFilter: (value: string[]) => void;
   artOptions: string[];
@@ -35,10 +31,6 @@ const FilterPanel = ({
   setJahrRange,
   jahrMinValue,
   jahrMaxValue,
-  kwRange,
-  setKwRange,
-  kwMinValue,
-  kwMaxValue,
   artFilter,
   setArtFilter,
   artOptions,
@@ -48,7 +40,7 @@ const FilterPanel = ({
   setLayer,
 }: FilterPanelProps) => {
   return (
-    <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
+    <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
       {/* Search */}
       <div className="space-y-3">
         <Label className="text-sm font-semibold">Adresssuche</Label>
@@ -93,26 +85,6 @@ const FilterPanel = ({
         </div>
       </div>
 
-      {/* KW-Bereich */}
-      <div className="space-y-3">
-        <Label className="text-sm font-semibold">
-          KW-Bereich ({kwRange[0]} - {kwRange[1]})
-        </Label>
-        <div className="space-y-2">
-          <Slider
-            value={kwRange}
-            onValueChange={(value) => setKwRange(value as [number, number])}
-            min={kwMinValue}
-            max={kwMaxValue}
-            step={1}
-            className="w-full"
-          />
-          <div className="flex justify-between text-xs text-muted-foreground">
-            <span>{kwMinValue}</span>
-            <span>{kwMaxValue}</span>
-          </div>
-        </div>
-      </div>
 
       {/* Kartenansicht */}
       <div className="space-y-3">

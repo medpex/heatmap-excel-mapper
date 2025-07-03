@@ -13,10 +13,6 @@ interface FilterSidebarProps {
   setJahrRange: (v: [number, number]) => void;
   jahrMinValue: number;
   jahrMaxValue: number;
-  kwRange: [number, number];
-  setKwRange: (v: [number, number]) => void;
-  kwMinValue: number;
-  kwMaxValue: number;
   artFilter: string[];
   setArtFilter: (v: string[]) => void;
   artOptions: string[];
@@ -27,7 +23,6 @@ interface FilterSidebarProps {
 const FilterSidebar: React.FC<FilterSidebarProps> = ({
   ortFilter, setOrtFilter, ortOptions,
   jahrRange, setJahrRange, jahrMinValue, jahrMaxValue,
-  kwRange, setKwRange, kwMinValue, kwMaxValue,
   artFilter, setArtFilter, artOptions,
   search, setSearch
 }) => {
@@ -64,20 +59,6 @@ const FilterSidebar: React.FC<FilterSidebarProps> = ({
           <div className="flex justify-between text-[10px] text-muted-foreground">
             <span>{jahrRange[0]}</span>
             <span>{jahrRange[1]}</span>
-          </div>
-        </CardContent>
-      </Card>
-      {/* KW-Zahl Filter */}
-      <Card className="border-l-4 border-green-400 rounded-xl p-3 shadow-sm">
-        <CardHeader className="flex flex-row items-center gap-2 pb-1 px-0 pt-0">
-          <span className="inline-flex items-center justify-center h-7 w-7 rounded-full bg-green-100"><Zap className="h-4 w-4 text-green-600" /></span>
-          <CardTitle className="text-xs font-semibold text-green-700">KW-Zahl</CardTitle>
-        </CardHeader>
-        <CardContent className="flex flex-col gap-1 px-0 pb-0">
-          <Slider min={kwMinValue} max={kwMaxValue} step={1} value={kwRange} onValueChange={v => setKwRange([v[0], v[1]])} className="mb-1" />
-          <div className="flex justify-between text-[10px] text-muted-foreground">
-            <span>{kwRange[0]}</span>
-            <span>{kwRange[1]}</span>
           </div>
         </CardContent>
       </Card>
