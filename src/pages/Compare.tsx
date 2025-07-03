@@ -14,7 +14,7 @@ import { Users, BarChart3, Target, Zap } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { DataRow } from '@/components/DataVisualizationTool';
 
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:4000/api';
+const API_URL = import.meta.env.VITE_API_URL || 'https://geoanalytics.home-ki.eu/api';
 const TABLES = [
   'Gefilterte_Adressen_Geesthacht',
   'Gefilterte_Adressen_Gülzow',
