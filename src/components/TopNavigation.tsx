@@ -26,8 +26,7 @@ export function TopNavigation() {
               <BarChart3 className="h-6 w-6 text-primary-foreground" />
             </div>
             <div>
-              <h1 className="text-xl font-bold text-foreground">GeoAnalytics</h1>
-              <p className="text-xs text-muted-foreground font-medium">Professional Edition</p>
+              <h1 className="text-xl font-bold text-foreground">SWG GasAnalytics</h1>
             </div>
           </div>
 
