@@ -26,6 +26,8 @@ const MapComponent = ({ data, layer }: MapComponentProps) => {
   const clusterGroup = useRef<any>(null);
   const heatmapLayer = useRef<any>(null);
   const markerLayer = useRef<any>(null);
+  const userInteracted = useRef<boolean>(false);
+  const initialLoad = useRef<boolean>(true);
 
   // Memoize valid data for performance
   const validData = useMemo(() => 
@@ -61,6 +63,17 @@ const MapComponent = ({ data, layer }: MapComponentProps) => {
         attribution: '© OpenStreetMap contributors',
         maxZoom: 18,
       }).addTo(map.current);
+
+      // Track user interaction to prevent auto-zoom
+      map.current.on('zoomstart', () => {
+        userInteracted.current = true;
+      });
+      map.current.on('dragstart', () => {
+        userInteracted.current = true;
+      });
+      map.current.on('movestart', () => {
+        userInteracted.current = true;
+      });
     }
 
     // Remove all layers
@@ -105,8 +118,9 @@ const MapComponent = ({ data, layer }: MapComponentProps) => {
       });
       clusterGroup.current.addLayers(markers);
       map.current?.addLayer(clusterGroup.current);
-      if (validData.length > 0) {
+      if (validData.length > 0 && (!userInteracted.current || initialLoad.current)) {
         map.current?.fitBounds(clusterGroup.current.getBounds().pad(0.1));
+        initialLoad.current = false;
       }
     }
 
@@ -126,8 +140,9 @@ const MapComponent = ({ data, layer }: MapComponentProps) => {
         }
       });
       map.current?.addLayer(heatmapLayer.current);
-      if (validData.length > 0) {
+      if (validData.length > 0 && (!userInteracted.current || initialLoad.current)) {
         map.current?.fitBounds(L.latLngBounds(validData.map(d => [d.latitude!, d.longitude!])).pad(0.1));
+        initialLoad.current = false;
       }
     }
 
@@ -153,8 +168,9 @@ const MapComponent = ({ data, layer }: MapComponentProps) => {
         markerLayer.current.addLayer(marker);
       });
       map.current?.addLayer(markerLayer.current);
-      if (validData.length > 0) {
+      if (validData.length > 0 && (!userInteracted.current || initialLoad.current)) {
         map.current?.fitBounds(L.latLngBounds(validData.map(d => [d.latitude!, d.longitude!])).pad(0.1));
+        initialLoad.current = false;
       }
     }
 
@@ -174,8 +190,8 @@ const MapComponent = ({ data, layer }: MapComponentProps) => {
     <div className="relative bg-muted/30">
       <div 
         ref={mapContainer} 
-        className="h-[500px] w-full"
-        style={{ minHeight: '500px' }}
+        className="h-[700px] w-full"
+        style={{ minHeight: '700px' }}
       />
       <div className="absolute top-6 right-6 bg-card/95 backdrop-blur-sm p-4 rounded-lg shadow-strong border border-border">
         <div className="space-y-3 text-sm">
