@@ -15,7 +15,7 @@ services:
   frontend:
     build: .
     environment:
-      - VITE_API_URL=http://10.0.0.78:4000/api
+      - VITE_API_URL=https://geoanalytics.home-ki.eu:4000/api
     ports:
       - "3001:80"
     depends_on:
