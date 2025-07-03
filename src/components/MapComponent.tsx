@@ -190,8 +190,8 @@ const MapComponent = ({ data, layer }: MapComponentProps) => {
     <div className="relative bg-muted/30">
       <div 
         ref={mapContainer} 
-        className="h-[700px] w-full"
-        style={{ minHeight: '700px' }}
+        className="h-[800px] w-full"
+        style={{ minHeight: '800px' }}
       />
       <div className="absolute top-6 right-6 bg-card/95 backdrop-blur-sm p-4 rounded-lg shadow-strong border border-border">
         <div className="space-y-3 text-sm">
