@@ -93,7 +93,7 @@ const DataVisualizationTool = () => {
   // Filteroptionen berechnen
   const ortOptions = unique(allGeoData.map(d => d.Ort));
   const jahrOptions = unique(allGeoData.map(d => getYear(d.Datum))).map(Number).filter(Boolean).sort((a, b) => a - b);
-  const artOptions = unique(allGeoData.map(d => d.Art));
+  const artOptions = unique(allGeoData.map(d => d.Art).filter(art => art && art !== 'NaN'));
   const jahrMinValue = jahrOptions.length ? Math.min(...jahrOptions) : 2000;
   const jahrMaxValue = jahrOptions.length ? Math.max(...jahrOptions) : 2024;
 
